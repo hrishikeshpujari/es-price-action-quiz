@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ES · Price Action · Daily Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080a0d;--surface:#0f1117;--surface2:#151820;--border:#1c2030;--border2:#252a3a;
+    --accent:#00c9ff;--accent-dim:rgba(0,201,255,.12);
+    --bull:#00e676;--bull-dim:rgba(0,230,118,.1);
+    --bear:#ff4060;--bear-dim:rgba(255,64,96,.1);
+    --gold:#ffca28;--gold-dim:rgba(255,202,40,.08);
+    --ema9:#f59e0b;--ema20:#a78bfa;
+    --text:#dde4f0;--text-dim:#4a5470;--text-mid:#7a87a8;
+    --mono:'JetBrains Mono',monospace;--display:'Barlow Condensed',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;font-size:13px}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:999}
+  #hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:stretch;justify-content:space-between;flex-wrap:wrap;gap:16px;position:sticky;top:0;z-index:100}
+  .hl{display:flex;align-items:center;gap:20px;padding:14px 0;border-right:1px solid var(--border);padding-right:20px}
+  .lm{font-family:var(--display);font-size:28px;font-weight:800;color:var(--accent);line-height:1}
+  .lt h1{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+  .lt p{font-size:9px;color:var(--text-mid);letter-spacing:.12em;margin-top:1px}
+  .hs{display:flex;align-items:center}
+  .sb{display:flex;flex-direction:column;align-items:center;padding:0 20px;border-right:1px solid var(--border);height:100%;justify-content:center;min-width:80px}
+  .sl{font-size:8px;color:var(--text-dim);letter-spacing:.15em;text-transform:uppercase}
+  .sv{font-size:20px;font-family:var(--display);font-weight:700;line-height:1.1;margin-top:1px}
+  .sk{padding:0 20px;display:flex;align-items:center;gap:8px;font-family:var(--display);font-size:18px;font-weight:700;color:var(--text-mid);transition:color .3s}
+  .sk.hot{color:var(--gold)}
+  #app{max-width:1400px;margin:0 auto;padding:24px 20px 60px;display:grid;grid-template-columns:1fr 300px;gap:16px;align-items:start}
+  #ctrl{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  #datebar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:6px;flex-wrap:wrap}
+  #datebar label{font-size:10px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+  #datepick{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 12px;font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s}
+  #datepick:focus{border-color:var(--accent)}
+  .dnote{font-size:10px;color:var(--text-dim);flex:1}
+  .dnote strong{color:var(--gold)}
+  #setup-panel{grid-column:1/-1;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:28px 32px}
+  .setup-title{font-family:var(--display);font-size:24px;font-weight:700;letter-spacing:.1em;color:var(--accent);margin-bottom:6px}
+  .setup-sub{font-size:11px;color:var(--text-mid);margin-bottom:24px;line-height:1.8}
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .sf label{display:block;font-size:10px;color:var(--text-dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .sf input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:10px 14px;font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s}
+  .sf input:focus{border-color:var(--accent)}
+  .sf input::placeholder{color:var(--text-dim)}
+  .sf .note{font-size:10px;color:var(--text-dim);margin-top:6px;line-height:1.7}
+  .sf .note a{color:var(--accent);text-decoration:none}
+  .sf .note a:hover{text-decoration:underline}
+  .setup-actions{margin-top:20px;display:flex;gap:10px;align-items:center}
+  select,button{font-family:var(--mono);font-size:11px;cursor:pointer;outline:none}
+  select{background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 12px;letter-spacing:.06em;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5470'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+  .btn-p{background:var(--accent);color:var(--bg);border:none;border-radius:4px;padding:8px 20px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:opacity .15s,transform .1s}
+  .btn-p:hover{opacity:.85}.btn-p:active{transform:scale(.98)}.btn-p:disabled{opacity:.4;cursor:wait}
+  .btn-s{background:transparent;color:var(--text-mid);border:1px solid var(--border2);border-radius:4px;padding:8px 14px;letter-spacing:.06em;transition:all .15s}
+  .btn-s:hover{border-color:var(--accent);color:var(--accent)}
+  .btn-cfg{background:transparent;color:var(--text-dim);border:1px solid var(--border);border-radius:4px;padding:8px 12px;transition:all .15s}
+  .btn-cfg:hover{color:var(--text);border-color:var(--border2)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .ch{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--text-mid);letter-spacing:.1em;text-transform:uppercase;background:var(--surface2)}
+  #chart-card,#loading-card,#error-card,#question-card{grid-column:1}
+  #error-card{border-color:var(--bear)!important}
+  #chart-wrap{padding:0;background:#070910;overflow-x:auto}
+  .hn{padding:5px 16px 8px;font-size:10px;color:var(--gold)}
+  .prog{height:2px;background:var(--border);overflow:hidden}
+  .pf{height:100%;background:var(--accent);animation:scan 1.4s ease-in-out infinite}
+  @keyframes scan{0%{transform:scaleX(0) translateX(0)}50%{transform:scaleX(1)}100%{transform:scaleX(0) translateX(300%)}}
+  .lc{padding:36px 24px;text-align:center}
+  .lt2{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:.15em;color:var(--text-mid);margin:0 0 8px}
+  .ls{font-size:11px;color:var(--text-dim)}
+  .et{color:var(--bear);font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:8px}
+  .eb{font-size:11px;color:var(--text-mid);line-height:1.8}
+  .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:9px;letter-spacing:.1em;font-weight:700;border:1px solid currentColor;text-transform:uppercase}
+  .bms{color:var(--accent);background:var(--accent-dim)}.bsb{color:var(--ema20);background:rgba(167,139,250,.1)}
+  .bes{color:var(--bull);background:var(--bull-dim)}.btm{color:var(--bear);background:var(--bear-dim)}
+  .bcr{color:var(--text-mid);background:rgba(122,135,168,.08)}
+  .bbeg{color:var(--bull);background:var(--bull-dim)}.bint{color:var(--gold);background:var(--gold-dim)}.badv{color:var(--bear);background:var(--bear-dim)}
+  .kc{font-size:10px;color:var(--text-dim);font-style:italic}
+  #qt{padding:18px 20px;font-size:14px;line-height:1.7;border-bottom:1px solid var(--border);color:var(--text)}
+  #opts{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .opt{background:transparent;border:1px solid var(--border2);border-radius:5px;padding:11px 16px;font-size:13px;color:var(--text);cursor:pointer;text-align:left;font-family:var(--mono);width:100%;transition:all .12s;line-height:1.5}
+  .opt:hover:not(:disabled){border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+  .opt.ok{border-color:var(--bull)!important;background:var(--bull-dim)!important;color:var(--bull)!important}
+  .opt.bad{border-color:var(--bear)!important;background:var(--bear-dim)!important;color:var(--bear)!important}
+  #exp{margin:0 16px 16px;padding:14px 16px;background:#07090e;border:1px solid var(--border);border-radius:5px;font-size:12px;line-height:1.8;color:var(--text-mid)}
+  .rl{font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:.1em;margin-bottom:10px}
+  .cp{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:4px 12px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;font-size:11px;color:var(--accent)}
+  .ap{display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding:8px 12px;background:var(--gold-dim);border:1px solid rgba(255,202,40,.2);border-radius:5px;font-size:11px;color:var(--gold);line-height:1.6}
+  #nw{padding:0 16px 16px}
+  #sidebar{grid-column:2;display:flex;flex-direction:column;gap:14px}
+  .hi{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px}
+  .hi:last-child{border-bottom:none}
+  .hd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .hcon{color:var(--text-mid);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px}
+  .ti{padding:8px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text-mid);line-height:1.6}
+  .ti:last-child{border-bottom:none}
+  .ti strong{color:var(--accent);font-weight:500}
+  @media(max-width:780px){#app{grid-template-columns:1fr}#sidebar,#chart-card,#question-card,#loading-card,#error-card,#setup-panel,#datebar{grid-column:1}.setup-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div class="hl">
+    <div class="lm">ES</div>
+    <div class="lt"><h1>Price Action · Daily Quiz</h1><p>5-min charts via Polygon.io · Al Brooks methodology · Claude AI</p></div>
+  </div>
+  <div class="hs">
+    <div class="sb"><span class="sl">Correct</span><span class="sv" id="sc">0/0</span></div>
+    <div class="sb"><span class="sl">Accuracy</span><span class="sv" id="sa" style="color:var(--text-mid)">—</span></div>
+    <div class="sk" id="sk"><span>🔥</span><span id="ss">0</span></div>
+  </div>
+</div>
+
+<div id="app">
+
+  <!-- Row 1: Ticker + Date + Load Chart -->
+  <div id="datebar" style="display:none">
+    <label>📈 Ticker</label>
+    <input type="text" id="ticker-input" value="SPY" maxlength="6"
+      style="background:var(--surface2);border:1px solid var(--border2);border-radius:4px;color:var(--text);padding:7px 10px;font-family:var(--mono);font-size:12px;width:72px;outline:none;text-transform:uppercase"
+      oninput="this.value=this.value.toUpperCase()">
+    <label style="margin-left:8px">📅 Date</label>
+    <input type="date" id="datepick">
+    <button class="btn-p" id="btn-new" onclick="go()" style="white-space:nowrap">Load Chart →</button>
+    <div class="dnote">
+      Any ticker (SPY, QQQ, AAPL…) · Any completed trading weekday · <strong>Polygon free tier: ~2 day lag — try Apr 14 or earlier today.</strong>
+    </div>
+  </div>
+
+  <!-- Row 2: Question filters + New Question -->
+  <div id="ctrl" style="display:none">
+    <select id="sel-type">
+      <option value="random">All Question Types</option>
+      <option value="market_structure">Market Structure</option>
+      <option value="signal_bar">Signal Bar</option>
+      <option value="entry_setup">Entry Setup</option>
+      <option value="trade_management">Trade Management</option>
+      <option value="context_reading">Context Reading</option>
+    </select>
+    <select id="sel-diff">
+      <option value="mixed">Mixed Difficulty</option>
+      <option value="beginner">Beginner</option>
+      <option value="intermediate">Intermediate</option>
+      <option value="advanced">Advanced</option>
+    </select>
+    <button class="btn-p" id="btn-newq" onclick="goSame()">New Question →</button>
+    <button class="btn-cfg" onclick="showSetup()">⚙ Keys</button>
+  </div>
+
+  <!-- Setup -->
+  <div id="setup-panel">
+    <div class="setup-title">Setup — Enter Your API Keys</div>
+    <div class="setup-sub">
+      Keys are stored only in <strong style="color:var(--accent)">your browser's localStorage</strong> — never sent to any server other than the APIs themselves.<br>
+      They are never included in the page source or GitHub repo. Each user who visits must enter their own keys.
+    </div>
+
+    <div style="background:#1a1000;border:1px solid #f59e0b44;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:11px;color:#f59e0b;line-height:1.7">
+      ⚠ <strong>API Key Security:</strong> Your Anthropic key is used directly from the browser (client-side).
+      Anyone who opens DevTools can read it from localStorage. For personal use this is fine.
+      For public hosting, consider adding a usage cap on your Anthropic key at
+      <a href="https://console.anthropic.com" target="_blank" style="color:#f59e0b">console.anthropic.com</a>
+      to limit any accidental exposure.
+    </div>
+
+    <div class="setup-grid">
+      <div class="sf">
+        <label>Anthropic API Key <span style="color:var(--bull)">★ Free credits</span></label>
+        <input type="password" id="ant-key" placeholder="sk-ant-api03-..." autocomplete="off" spellcheck="false">
+        <div class="note">
+          Get at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys.<br>
+          Used to generate Al Brooks quiz questions from the chart.<br>
+          Set a monthly spend limit to protect against misuse.
+        </div>
+      </div>
+      <div class="sf">
+        <label>Polygon.io API Key <span style="color:var(--bull)">★ Free</span></label>
+        <input type="text" id="poly-key" placeholder="e.g. abc123XYZ..." autocomplete="off" spellcheck="false">
+        <div class="note">
+          Free at <a href="https://polygon.io/dashboard/signup" target="_blank">polygon.io/dashboard/signup</a> — no credit card.<br>
+          Fetches 5-min OHLC for any ticker on completed trading days.
+        </div>
+      </div>
+    </div>
+    <div class="setup-actions">
+      <button class="btn-p" onclick="saveKeys()">Save &amp; Start →</button>
+      <span id="save-note" style="font-size:10px;color:var(--text-dim)"></span>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="card" id="loading-card" style="display:none">
+    <div class="prog"><div class="pf"></div></div>
+    <div class="lc">
+      <div class="lt2" id="ltitle">Fetching Chart Data…</div>
+      <div class="ls"  id="lsub">Connecting to Polygon.io</div>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="card" id="error-card" style="display:none">
+    <div style="padding:20px">
+      <div class="et">⚠ Error</div>
+      <div class="eb" id="eb"></div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card" id="chart-card" style="display:none">
+    <div class="ch">
+      <span id="chart-title">SPY · 5-MIN</span>
+      <span style="display:flex;gap:14px">
+        <span style="color:var(--ema9)">— 9 EMA</span>
+        <span style="color:var(--ema20)">— 20 EMA</span>
+      </span>
+    </div>
+    <div id="chart-wrap"></div>
+    <div class="hn" id="hn" style="display:none"></div>
+  </div>
+
+  <!-- Question -->
+  <div class="card" id="question-card" style="display:none">
+    <div class="ch">
+      <div style="display:flex;gap:7px;align-items:center" id="qbadges"></div>
+      <div class="kc" id="kc"></div>
+    </div>
+    <div id="qt"></div>
+    <div id="opts"></div>
+    <div id="exp" style="display:none"></div>
+    <div id="nw"  style="display:none">
+      <button class="btn-p" onclick="goSame()">Next Question →</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div class="card" id="history-card" style="display:none">
+      <div class="ch">Session History</div>
+      <div style="padding:4px 16px 4px" id="hlist"></div>
+    </div>
+    <div class="card">
+      <div class="ch">Al Brooks Quick Tips</div>
+      <div style="padding:8px 16px 12px">
+        <div class="ti"><strong>With-trend trades</strong> have higher probability — always know which side of the trend you're on.</div>
+        <div class="ti"><strong>Signal bar quality</strong> matters. Strong bull reversal: large body, small tails, closes near high.</div>
+        <div class="ti"><strong>9 &amp; 20 EMA</strong> — price above both = bulls in control. 9 crossing 20 signals trend shift.</div>
+        <div class="ti"><strong>Failed breakouts</strong> often give the best countertrend trades — need strong signal bars.</div>
+        <div class="ti"><strong>Two-legged corrections</strong> — look for high 2 / low 2 entries before trend resumes.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let ST = {
+  bars:null, tradingDate:null, ticker:'SPY', question:null,
+  selected:null, revealed:false,
+  score:{c:0,t:0}, streak:0, history:[],
+  hlBar:null, polyKey:'', antKey:''
+};
+
+// ── Keys ───────────────────────────────────────────────────────────────────
+function loadKeys() {
+  ST.polyKey = localStorage.getItem('poly_key') || '';
+  ST.antKey  = localStorage.getItem('ant_key')  || '';
+  if (ST.polyKey) document.getElementById('poly-key').value = ST.polyKey;
+  if (ST.antKey)  document.getElementById('ant-key').value  = ST.antKey;
+}
+function saveKeys() {
+  const pk = document.getElementById('poly-key').value.trim();
+  const ak = document.getElementById('ant-key').value.trim();
+  if (!pk||!ak) { sn('⚠ Please enter both keys.','var(--bear)'); return; }
+  localStorage.setItem('poly_key',pk);
+  localStorage.setItem('ant_key',ak);
+  ST.polyKey=pk; ST.antKey=ak;
+  sn('✓ Saved!','var(--bull)');
+  setTimeout(()=>{ hide('setup-panel'); showMain(); go(); }, 600);
+}
+function sn(m,c){ document.getElementById('save-note').textContent=m; document.getElementById('save-note').style.color=c; }
+function showSetup(){ show('setup-panel'); hide('ctrl'); hide('datebar'); hide('chart-card'); hide('question-card'); hide('loading-card'); hide('error-card'); }
+function showMain(){ hide('setup-panel'); show('ctrl'); show('datebar'); }
+
+// ── Date helpers ────────────────────────────────────────────────────────────
+function initDatePicker() {
+  const p = document.getElementById('datepick');
+  // Default: 2 weekdays ago — Polygon free tier has a ~1-2 day lag on full session data
+  const d = new Date();
+  d.setDate(d.getDate() - 2);
+  while (d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()-1);
+  p.value = d.toISOString().slice(0,10);
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  p.max = yest.toISOString().slice(0,10);
+  const two = new Date(); two.setFullYear(two.getFullYear()-2);
+  p.min = two.toISOString().slice(0,10);
+}
+function selectedDate() {
+  return document.getElementById('datepick').value;
+}
+function fmtLabel(d) {
+  return new Date(d+'T12:00:00Z').toLocaleDateString('en-US',
+    {weekday:'long',month:'long',day:'numeric',year:'numeric',timeZone:'UTC'});
+}
+
+// ── Fetch SPY 5-min for the selected date ─────────────────────────────────
+// Uses explicit millisecond timestamps for 9:30 AM – 4:00 PM ET
+// Paginates through next_url to collect all bars
+async function fetchBars(dateStr) {
+  // Compute ET→UTC offset correctly: probe at noon UTC, read ET hour
+  // noon UTC (12:00) = 8:00 AM EDT (UTC-4) → offset = 12 - 8 = 4
+  // noon UTC (12:00) = 7:00 AM EST (UTC-5) → offset = 12 - 7 = 5
+  const probeNoonUTC = new Date(dateStr + 'T12:00:00Z');
+  const etHourAtNoonUTC = parseInt(new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric', hour12: false, timeZone: 'America/New_York'
+  }).format(probeNoonUTC));
+  const etOffsetHours = 12 - etHourAtNoonUTC; // 4 for EDT, 5 for EST
+
+  const ticker = (document.getElementById('ticker-input')?.value || 'SPY').trim().toUpperCase() || 'SPY';
+
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const openMs  = Date.UTC(y, mo-1, d,  9 + etOffsetHours, 30); // 9:30 AM ET
+  const closeMs = Date.UTC(y, mo-1, d, 16 + etOffsetHours,  0); // 4:00 PM ET
+
+  // Paginate: collect all bars across multiple requests if needed
+  let allResults = [];
+  let url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/5/minute/${openMs}/${closeMs}?adjusted=true&sort=asc&limit=300&apiKey=${ST.polyKey}`;
+
+  for (let page = 0; page < 5; page++) { // max 5 pages safety
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.status === 'ERROR' || data.error) {
+      const m = String(data.error || '').toLowerCase();
+      if (m.includes('auth') || m.includes('unauthorized') || m.includes('api key')) {
+        throw new Error('Invalid Polygon.io API key.\nClick ⚙ Keys to update it.');
+      }
+      throw new Error('Polygon.io error: ' + (data.error || JSON.stringify(data)));
+    }
+
+    if (data.results && data.results.length > 0) {
+      allResults = allResults.concat(data.results);
+    }
+
+    // Follow next_url if more pages exist, appending our API key
+    if (data.next_url) {
+      url = data.next_url + `&apiKey=${ST.polyKey}`;
+    } else {
+      break;
+    }
+  }
+
+  if (allResults.length === 0) {
+    throw new Error(
+      `No data for ${dateStr} (9:30AM–4:00PM ET).\n\n` +
+      '• This may be a market holiday or weekend\n' +
+      '• Try a different date in the date picker'
+    );
+  }
+
+  if (allResults.length < 10) {
+    throw new Error(
+      `Only ${allResults.length} bars found for ${dateStr}.\n` +
+      'This may be a half-day session or holiday. Try a different date.'
+    );
+  }
+
+  return allResults.map((r, i) => ({
+    barNum: i + 1,
+    timePT: new Date(r.t).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Los_Angeles' }),
+    o: +r.o.toFixed(2), h: +r.h.toFixed(2), l: +r.l.toFixed(2), c: +r.c.toFixed(2), v: r.v || 0
+  }));
+}
+
+// ── EMA calculation ─────────────────────────────────────────────────────────
+function calcEMA(vals, period) {
+  const k = 2/(period+1);
+  const out = new Array(vals.length).fill(null);
+  if (vals.length < period) return out;
+  let sum = 0;
+  for (let i=0;i<period;i++) sum+=vals[i];
+  out[period-1] = sum/period;
+  for (let i=period;i<vals.length;i++) out[i]=vals[i]*k+out[i-1]*(1-k);
+  return out;
+}
+
+// ── SVG chart with bar numbers, 9 EMA, 20 EMA ─────────────────────────────
+function buildChart(bars, hlBar) {
+  // Dimensions - chart fills the full card width via viewBox
+  const cW=15, gap=2, pV=30, LP=62;
+  const BOT = 42; // bottom strip: 20px bar nums + 16px time labels + 6px gap
+  const H = 420;
+  const chartH = H - pV - BOT;
+  const W = LP + bars.length*(cW+gap) + 16;
+
+  const mxH = Math.max(...bars.map(b=>b.h));
+  const mnL  = Math.min(...bars.map(b=>b.l));
+  const rng  = mxH - mnL || 1;
+  const toY  = v => pV + ((mxH-v)/rng)*chartH;
+
+  const closes = bars.map(b=>b.c);
+  const e9  = calcEMA(closes, 9);
+  const e20 = calcEMA(closes, 20);
+
+  const emaLine = (arr, color) => {
+    const pts = arr.map((v,i) => v!==null ? `${LP+i*(cW+gap)+cW/2},${toY(v)}` : null).filter(Boolean).join(' ');
+    return pts ? `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" opacity=".9"/>` : '';
+  };
+
+  // Use viewBox so SVG scales to fill container width
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">`;
+
+  // Background
+  s += `<rect width="${W}" height="${H}" fill="#070910"/>`;
+
+  // Grid lines + price labels (right side, large and bright)
+  const gridCount = 7;
+  for (let i=0; i<=gridCount; i++) {
+    const f = i/gridCount;
+    const y = toY(mxH - f*rng);
+    const p = (mxH - f*rng).toFixed(2);
+    s += `<line x1="${LP}" y1="${y}" x2="${W}" y2="${y}" stroke="#1e2535" stroke-width=".8"/>`;
+    // Price label on left — large, bright, easy to read
+    s += `<text x="${LP-4}" y="${y+4}" fill="#99aac0" font-size="11" font-family="monospace" text-anchor="end" font-weight="500">${p}</text>`;
+  }
+
+  // EMAs
+  s += emaLine(e20, '#a78bfa');
+  s += emaLine(e9,  '#f59e0b');
+
+  // Candles
+  bars.forEach((b,i) => {
+    const x  = LP + i*(cW+gap);
+    const cx = x + cW/2;
+    const bull = b.c >= b.o;
+    const bt = toY(Math.max(b.o, b.c));
+    const bb = toY(Math.min(b.o, b.c));
+    const bh = Math.max(2, bb - bt);
+    const col = bull ? '#00e676' : '#ff4060';
+    const hl  = hlBar === b.barNum;
+
+    if (hl) {
+      s += `<rect x="${x-2}" y="${pV}" width="${cW+4}" height="${chartH}" fill="#ffca28" opacity=".08"/>`;
+      s += `<line x1="${cx}" y1="${pV}" x2="${cx}" y2="${H-BOT}" stroke="#ffca28" stroke-width="1.5" opacity=".35"/>`;
+    }
+    s += `<line x1="${cx}" y1="${toY(b.h)}" x2="${cx}" y2="${toY(b.l)}" stroke="${col}" stroke-width="1.5"/>`;
+    s += `<rect x="${x+1}" y="${bt}" width="${cW-2}" height="${bh}" fill="${col}" rx="1"/>`;
+    if (hl) s += `<rect x="${x-1}" y="${bt-1}" width="${cW+2}" height="${bh+2}" fill="none" stroke="#ffca28" stroke-width="2" rx="1"/>`;
+  });
+
+  // Bar numbers — every bar, clear tiers
+  bars.forEach((b,i) => {
+    const cx   = LP + i*(cW+gap) + cW/2;
+    const numY = H - BOT + 16; // first line of bottom strip
+    const is10 = b.barNum % 10 === 0;
+    const is5  = b.barNum % 5  === 0;
+    const hl   = hlBar === b.barNum;
+    const col  = hl ? '#ffca28' : is10 ? '#ddeeff' : is5 ? '#99aabb' : '#607080';
+    const sz   = is10 ? '12' : is5 ? '11' : '10';
+    const fw   = is10 ? 'bold' : 'normal';
+    s += `<text x="${cx}" y="${numY}" fill="${col}" font-size="${sz}" text-anchor="middle" font-family="monospace" font-weight="${fw}">${b.barNum}</text>`;
+  });
+
+  // Time labels — bar 1 + every 12 + last bar
+  bars.forEach((b,i) => {
+    if (b.barNum===1 || b.barNum%12===0 || i===bars.length-1) {
+      const cx = LP + i*(cW+gap) + cW/2;
+      s += `<text x="${cx}" y="${H-4}" fill="#607080" font-size="10" text-anchor="middle" font-family="monospace">${b.timePT}</text>`;
+    }
+  });
+
+  return s + '</svg>';
+}
+
+// ── AI question ────────────────────────────────────────────────────────────
+const SYS=`You are an elite price action trading coach trained on Al Brooks' three-volume series (Trends, Ranges, Reversals).
+Chart: 5-minute bars for one trading day. For price action study purposes treat it identically to ES futures.
+Times are Pacific Time (PT): open=6:30AM, close=1:00PM. Bar numbers are sequential from 1.
+Chart shows 9 EMA (amber) and 20 EMA (purple).
+
+Respond ONLY with valid JSON — no markdown fences:
+{"question":"...","type":"market_structure|signal_bar|entry_setup|trade_management|context_reading","difficulty":"beginner|intermediate|advanced","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"explanation":"...","key_concept":"...","chart_annotation":"..."}
+
+Rules: reference specific Bar N numbers with actual prices; wrong options = real trader mistakes; explanation uses Al Brooks concepts (with-trend, signal bar quality, 9/20 EMA, two-legged corrections, high 1/2, low 1/2, spike and channel, wedge, measured move); key_concept = short Al Brooks label; chart_annotation must say "Bar N".`;
+
+async function genQ(bars,date,qtype,diff){
+  const summary=bars.map(b=>`Bar${b.barNum}(${b.timePT}):O=${b.o} H=${b.h} L=${b.l} C=${b.c} V=${b.v}`).join('\n');
+  const qt=qtype==='random'?'Pick the type that best suits this chart.':`Type: ${qtype.replace(/_/g,' ')}.`;
+  const df=diff==='mixed'?'Choose difficulty that creates the most educational question.':`Difficulty: ${diff}.`;
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':ST.antKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,system:SYS,
+      messages:[{role:'user',content:`SPY 5-min — ${date}. ${bars.length} bars (6:30AM–1:00PM PT):\n\n${summary}\n\n${qt}\n${df}\n\nGenerate one quiz question.`}]})
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(`Claude API error: ${e?.error?.message||res.status}`);}
+  const d=await res.json();
+  return JSON.parse(d.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function show(id){const e=document.getElementById(id);if(e)e.style.display='';}
+function hide(id){const e=document.getElementById(id);if(e)e.style.display='none';}
+function htm(id,h){const e=document.getElementById(id);if(e)e.innerHTML=h;}
+function txt(id,t){const e=document.getElementById(id);if(e)e.textContent=t;}
+const TC={market_structure:'bms',signal_bar:'bsb',entry_setup:'bes',trade_management:'btm',context_reading:'bcr'};
+const DC={beginner:'bbeg',intermediate:'bint',advanced:'badv'};
+const TL={market_structure:'market structure',signal_bar:'signal bar',entry_setup:'entry setup',trade_management:'trade mgmt',context_reading:'context'};
+
+function updateStats(){
+  txt('sc',`${ST.score.c}/${ST.score.t}`);
+  if(!ST.score.t){txt('sa','—');document.getElementById('sa').style.color='var(--text-mid)';}
+  else{const a=Math.round(ST.score.c/ST.score.t*100);txt('sa',a+'%');document.getElementById('sa').style.color=a>=70?'var(--bull)':a>=50?'var(--gold)':'var(--bear)';}
+  txt('ss',ST.streak);
+  document.getElementById('sk').className='sk'+(ST.streak>=3?' hot':'');
+}
+function renderChart(){
+  if(!ST.bars)return;
+  htm('chart-wrap',buildChart(ST.bars,ST.hlBar));
+  const hn=document.getElementById('hn');
+  if(ST.hlBar){hn.style.display='';hn.textContent=`↑ Bar ${ST.hlBar} highlighted`;}
+  else hn.style.display='none';
+}
+function renderQ(){
+  const q=ST.question;if(!q)return;
+  htm('qbadges',`<span class="badge ${TC[q.type]||'bcr'}">${TL[q.type]||q.type}</span>${q.difficulty?`<span class="badge ${DC[q.difficulty]||''}">${q.difficulty}</span>`:''}`);
+  txt('kc',q.key_concept||'');
+  txt('qt',q.question);
+  htm('opts',(q.options||[]).map((o,i)=>`<button class="opt" id="opt-${i}" onclick="answer(${i})">${o}</button>`).join(''));
+  hide('exp');hide('nw');
+}
+function renderHistory(){
+  if(!ST.history.length){hide('history-card');return;}show('history-card');
+  htm('hlist',ST.history.map(h=>`<div class="hi"><div class="hd" style="background:${h.ok?'var(--bull)':'var(--bear)'}"></div><div class="hcon">${h.concept||'—'}</div><span class="badge ${TC[h.type]||'bcr'}" style="font-size:8px">${TL[h.type]||''}</span></div>`).join(''));
+}
+function answer(idx){
+  if(ST.revealed)return;
+  ST.selected=idx;ST.revealed=true;
+  const ok=idx===ST.question.correct;
+  ST.score.t++;if(ok)ST.score.c++;
+  ST.streak=ok?ST.streak+1:0;
+  ST.history.unshift({concept:ST.question.key_concept,ok,type:ST.question.type});
+  if(ST.history.length>10)ST.history.pop();
+  (ST.question.options||[]).forEach((_,i)=>{
+    const el=document.getElementById(`opt-${i}`);if(!el)return;
+    el.disabled=true;
+    if(i===ST.question.correct)el.classList.add('ok');
+    else if(i===idx)el.classList.add('bad');
+  });
+  const q=ST.question;
+  htm('exp',`<div class="rl" style="color:${ok?'var(--bull)':'var(--bear)'}">${ok?'✓ CORRECT':'✗ INCORRECT'}</div><div>${q.explanation||''}</div>${q.key_concept?`<div class="cp">📚 ${q.key_concept}</div>`:''}${q.chart_annotation?`<div class="ap"><span>📍</span><span>${q.chart_annotation}</span></div>`:''}`);
+  show('exp');show('nw');
+  if(q.chart_annotation){const m=q.chart_annotation.match(/[Bb]ar\s*(\d+)/);if(m){ST.hlBar=parseInt(m[1]);renderChart();}}
+  updateStats();renderHistory();
+}
+
+// ── Main flow ──────────────────────────────────────────────────────────────
+async function go(){
+  const dateStr = selectedDate();
+  const ticker  = (document.getElementById('ticker-input')?.value || 'SPY').trim().toUpperCase() || 'SPY';
+  ST.question=null;ST.selected=null;ST.revealed=false;ST.hlBar=null;ST.bars=null;
+  hide('error-card');hide('chart-card');hide('question-card');
+  show('loading-card');
+  document.getElementById('btn-new').disabled=true;
+  document.getElementById('btn-newq').disabled=true;
+
+  // Step 1: fetch chart data
+  txt('ltitle',`Fetching ${ticker} Chart…`);
+  txt('lsub',`Requesting ${ticker} 5-min for ${dateStr}…`);
+  let bars;
+  try{
+    bars=await fetchBars(dateStr);
+    ST.bars=bars; ST.tradingDate=fmtLabel(dateStr); ST.ticker=ticker;
+  }catch(e){
+    hide('loading-card');htm('eb',e.message.replace(/\n/g,'<br>'));show('error-card');
+    document.getElementById('btn-new').disabled=false;
+    document.getElementById('btn-newq').disabled=false;
+    return;
+  }
+
+  txt('chart-title',`${ticker} · ${fmtLabel(dateStr)} · 5-MIN · ${bars.length} bars · 6:30AM–1:00PM PT`);
+  renderChart();show('chart-card');
+
+  // Step 2: generate question automatically
+  txt('ltitle','Analyzing Price Action…');
+  txt('lsub','Claude reading bar-by-bar · Al Brooks framework');
+  const qtype=document.getElementById('sel-type').value;
+  const diff=document.getElementById('sel-diff').value;
+  try{
+    const q=await genQ(bars,`${ticker} — ${fmtLabel(dateStr)}`,qtype,diff);
+    ST.question=q;renderQ();show('question-card');hide('loading-card');
+  }catch(e){
+    hide('loading-card');htm('eb',e.message.replace(/\n/g,'<br>'));show('error-card');
+  }
+  document.getElementById('btn-new').disabled=false;
+  document.getElementById('btn-newq').disabled=false;
+}
+async function goSame(){
+  if(!ST.bars){go();return;}
+  ST.question=null;ST.selected=null;ST.revealed=false;ST.hlBar=null;
+  renderChart();
+  hide('question-card');hide('error-card');
+  htm('question-card',`
+    <div style="padding:32px 24px;text-align:center">
+      <div class="prog" style="margin-bottom:20px"><div class="pf"></div></div>
+      <div class="lt2" style="font-size:16px">Generating New Question…</div>
+      <div class="ls" style="margin-top:6px">${ST.ticker||'SPY'} · ${ST.tradingDate||''} · fresh question from Claude</div>
+    </div>`);
+  show('question-card');
+  document.getElementById('btn-new').disabled=true;
+  document.getElementById('btn-newq').disabled=true;
+  const qtype=document.getElementById('sel-type').value;
+  const diff=document.getElementById('sel-diff').value;
+  try{
+    const q=await genQ(ST.bars,`${ST.ticker||'SPY'} — ${ST.tradingDate}`,qtype,diff);
+    ST.question=q;renderQ();show('question-card');
+  }catch(e){
+    htm('question-card','');hide('question-card');
+    htm('eb',e.message.replace(/\n/g,'<br>'));show('error-card');
+  }
+  document.getElementById('btn-new').disabled=false;
+  document.getElementById('btn-newq').disabled=false;
+}
+
+// Boot
+loadKeys();
+initDatePicker();
+updateStats();
+if(ST.polyKey&&ST.antKey){ showMain(); go(); }
+</script>
+</body>
+</html>
